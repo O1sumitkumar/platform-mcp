@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from platform_mcp.formatting import (
+    clamp_limit,
     first_line,
     quote_filter_value,
     money_to_float,
@@ -35,6 +36,15 @@ class TestParseDuration:
         assert parse_duration_seconds(text, default_seconds=42) == 42
 
 
+class TestClampLimit:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(0, 1), (-5, 1), (1, 1), (25, 25), (100, 100), (101, 100), (10**9, 100)],
+    )
+    def test_limit_is_bounded_to_one_through_maximum(self, value, expected):
+        assert clamp_limit(value, 100) == expected
+
+
 class TestTruncate:
     def test_short_text_is_untouched(self):
         assert truncate("hello") == "hello"
@@ -42,7 +52,7 @@ class TestTruncate:
     def test_long_text_is_marked_as_cut(self):
         result = truncate("x" * 500, limit=100)
         assert len(result) == 100
-        assert result.endswith("…")
+        assert result.endswith("â€¦")
 
     def test_none_becomes_empty(self):
         assert truncate(None) == ""
