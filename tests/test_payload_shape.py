@@ -58,7 +58,7 @@ class TestMessageTruncation:
         row = logging_tools._format_entry(make_entry("x" * 5000))
         assert row["message_truncated"] is True
         assert row["message_full_length"] == 5000
-        assert row["message"].endswith("â€¦")
+        assert row["message"].endswith("…")
         assert len(row["message"]) == logging_tools._MESSAGE_LIMIT
 
     def test_the_cap_is_generous_enough_for_a_stack_trace(self):
