@@ -10,7 +10,7 @@ def truncate(text: Any, limit: int = 400) -> str:
     s = s.strip()
     if len(s) <= limit:
         return s
-    return s[: limit - 1] + "â€¦"
+    return s[: limit - 1] + "…"
 
 
 def truncate_reported(text: Any, limit: int) -> tuple[str, int]:
@@ -27,7 +27,7 @@ def truncate_reported(text: Any, limit: int) -> tuple[str, int]:
     original = len(s)
     if original <= limit:
         return s, original
-    return s[: limit - 1] + "â€¦", original
+    return s[: limit - 1] + "…", original
 
 
 def first_line(text: Any, limit: int = 300) -> str:
