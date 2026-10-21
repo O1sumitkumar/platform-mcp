@@ -52,7 +52,7 @@ class TestTruncate:
     def test_long_text_is_marked_as_cut(self):
         result = truncate("x" * 500, limit=100)
         assert len(result) == 100
-        assert result.endswith("â€¦")
+        assert result.endswith("…")
 
     def test_none_becomes_empty(self):
         assert truncate(None) == ""
