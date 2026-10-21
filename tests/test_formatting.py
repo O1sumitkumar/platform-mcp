@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from platform_mcp.formatting import (
+    clamp_limit,
     first_line,
     quote_filter_value,
     money_to_float,
@@ -33,6 +34,15 @@ class TestParseDuration:
     @pytest.mark.parametrize("text", ["", "soon", "abcs", "h"])
     def test_unparseable_input_falls_back_to_the_default(self, text):
         assert parse_duration_seconds(text, default_seconds=42) == 42
+
+
+class TestClampLimit:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(0, 1), (-5, 1), (1, 1), (25, 25), (100, 100), (101, 100), (10**9, 100)],
+    )
+    def test_limit_is_bounded_to_one_through_maximum(self, value, expected):
+        assert clamp_limit(value, 100) == expected
 
 
 class TestTruncate:

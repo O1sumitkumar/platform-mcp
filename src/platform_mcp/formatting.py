@@ -45,6 +45,16 @@ def money_to_float(money: Any) -> float | None:
     return round(units + nanos / 1e9, 4)
 
 
+def clamp_limit(value: int, maximum: int) -> int:
+    """Bound a caller-supplied ``limit`` to ``1..maximum``.
+
+    The list tools append an item before checking ``len(items) >= limit``, so
+    an unclamped ``limit=0`` (or a negative one) still returns one item, and a
+    huge value lets a single response grow without bound.
+    """
+    return max(1, min(value, maximum))
+
+
 def parse_list_arg(value: str | None) -> list[str]:
     """Parse a comma-separated string argument into a clean list."""
     if not value:

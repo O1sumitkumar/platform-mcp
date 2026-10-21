@@ -13,8 +13,10 @@ from types import SimpleNamespace
 
 import pytest
 
+import anyio
+
 from platform_mcp.formatting import truncate_reported
-from platform_mcp.tools import logging_tools
+from platform_mcp.tools import logging_tools, monitoring_tools, recommender_tools
 from platform_mcp.tools.inventory_tools import _format_resource
 
 pytestmark = pytest.mark.usefixtures("configured")
@@ -141,3 +143,74 @@ class TestResourceShape:
         lean = len(json.dumps(_format_resource(fat)))
         full = len(json.dumps(_format_resource(fat, include_labels=True)))
         assert lean < full * 0.75
+
+
+def make_policy(i: int):
+    return SimpleNamespace(
+        name=f"projects/demo/alertPolicies/{i}",
+        display_name=f"policy {i}",
+        enabled=True,
+        conditions=[],
+    )
+
+
+def make_uptime_check(i: int):
+    return SimpleNamespace(
+        name=f"projects/demo/uptimeCheckConfigs/{i}",
+        display_name=f"check {i}",
+        period=SimpleNamespace(seconds=60),
+        monitored_resource=SimpleNamespace(labels={"host": "example.com"}),
+    )
+
+
+def make_recommendation(i: int):
+    return SimpleNamespace(
+        name=f"projects/demo/recommendations/{i}",
+        description="Stop an idle VM",
+        primary_impact=None,
+        state_info=None,
+        priority=None,
+    )
+
+
+def stub_client(monkeypatch, module, getter: str, method: str, make, count: int):
+    """Point ``module.getter`` at a client whose ``method`` yields ``count`` items."""
+    client = SimpleNamespace(**{method: lambda **_: (make(i) for i in range(count))})
+    monkeypatch.setattr(module, getter, lambda env: client)
+
+
+class TestLimitClamp:
+    """A caller-supplied limit is bounded, so one call can't return everything (#7)."""
+
+    def test_alert_policies_are_capped(self, monkeypatch):
+        stub_client(monkeypatch, monitoring_tools, "get_alert_policy_client",
+                    "list_alert_policies", make_policy, 600)
+        assert monitoring_tools.list_alert_policies(limit=10**6)["count"] == 500
+
+    def test_uptime_checks_are_capped(self, monkeypatch):
+        stub_client(monkeypatch, monitoring_tools, "get_uptime_client",
+                    "list_uptime_check_configs", make_uptime_check, 600)
+        assert monitoring_tools.list_uptime_checks(limit=10**6)["count"] == 500
+
+    def test_recommendations_are_capped(self, monkeypatch):
+        stub_client(monkeypatch, recommender_tools, "get_recommender_client",
+                    "list_recommendations", make_recommendation, 300)
+        result = recommender_tools.list_recommendations("google.demo.Recommender",
+                                                        limit=10**6)
+        assert result["count"] == 200
+
+    def test_cost_recommendations_are_capped_per_call(self, monkeypatch):
+        stub_client(monkeypatch, recommender_tools, "get_recommender_client",
+                    "list_recommendations", make_recommendation, 300)
+        result = anyio.run(
+            lambda: recommender_tools.list_cost_recommendations(
+                locations="us-central1", limit_per_call=10**6
+            )
+        )
+        assert result["count"] == 200 * len(recommender_tools.COST_RECOMMENDERS)
+
+    @pytest.mark.parametrize("limit", [0, -3])
+    def test_a_non_positive_limit_means_one(self, monkeypatch, limit):
+        stub_client(monkeypatch, monitoring_tools, "get_alert_policy_client",
+                    "list_alert_policies", make_policy, 5)
+        assert monitoring_tools.list_alert_policies(limit=limit)["count"] == 1

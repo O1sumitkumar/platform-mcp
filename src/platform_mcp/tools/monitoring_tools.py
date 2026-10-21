@@ -7,7 +7,12 @@ import time
 from ..clients import get_alert_policy_client, get_metric_client, get_uptime_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import parse_duration_seconds, quote_filter_value, truncate
+from ..formatting import (
+    clamp_limit,
+    parse_duration_seconds,
+    quote_filter_value,
+    truncate,
+)
 
 # Points kept per series. A 1h window at 1m alignment is 60 points per series
 # and query_metric can return 50 series, which is far more than an answer needs.
@@ -62,7 +67,7 @@ def query_metric(
     env = resolve_environment(environment)
     client = get_metric_client(env)
     project = env.project
-    limit = max(1, min(limit, 50))
+    limit = clamp_limit(limit, 50)
 
     now = int(time.time())
     window_s = parse_duration_seconds(window, default_seconds=3600)
@@ -152,6 +157,7 @@ def list_alert_policies(limit: int = 100, environment: str = "") -> dict:
     env = resolve_environment(environment)
     client = get_alert_policy_client(env)
     project = env.project
+    limit = clamp_limit(limit, 500)
     policies = []
     for p in client.list_alert_policies(name=f"projects/{project}"):
         policies.append(
@@ -183,6 +189,7 @@ def list_uptime_checks(limit: int = 100, environment: str = "") -> dict:
     env = resolve_environment(environment)
     client = get_uptime_client(env)
     project = env.project
+    limit = clamp_limit(limit, 500)
     checks = []
     for c in client.list_uptime_check_configs(parent=f"projects/{project}"):
         monitored = c.monitored_resource.labels if c.monitored_resource else {}

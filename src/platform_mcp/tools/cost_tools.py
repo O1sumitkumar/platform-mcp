@@ -8,6 +8,7 @@ from ..clients import get_bigquery_client, get_billing_client
 from ..errors import PlatformMCPError
 from ..registration import register_tool
 from ..config import list_environments, resolve_environment
+from ..formatting import clamp_limit
 
 # Whitelisted group-by columns -> billing export column expressions. Kept as a
 # whitelist because column identifiers cannot be passed as query parameters.
@@ -78,7 +79,7 @@ def get_cost_breakdown(
         )
 
     days = max(1, min(days, 365))
-    limit = max(1, min(limit, 200))
+    limit = clamp_limit(limit, 200)
     project_filter = "" if all_projects else "AND project.id = @project"
     sql = f"""
         SELECT

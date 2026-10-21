@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..clients import get_error_stats_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import first_line
+from ..formatting import clamp_limit, first_line
 
 
 def _period_for_hours(hours: int):
@@ -44,7 +44,7 @@ def list_error_groups(
     env = resolve_environment(environment)
     client = get_error_stats_client(env)
     project = env.project
-    limit = max(1, min(limit, 100))
+    limit = clamp_limit(limit, 100)
 
     request: dict = {
         "project_name": f"projects/{project}",

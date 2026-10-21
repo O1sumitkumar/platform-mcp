@@ -9,7 +9,12 @@ from typing import Any
 from ..clients import get_logging_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import parse_duration_seconds, quote_filter_value, truncate_reported
+from ..formatting import (
+    clamp_limit,
+    parse_duration_seconds,
+    quote_filter_value,
+    truncate_reported,
+)
 
 
 def _since_timestamp(freshness: str) -> str:
@@ -78,7 +83,7 @@ def query_logs(
     """
     env = resolve_environment(environment)
     client = get_logging_client(env)
-    limit = max(1, min(limit, 500))
+    limit = clamp_limit(limit, 500)
     time_filter = f'timestamp>="{_since_timestamp(freshness)}"'
     full_filter = f"({filter}) AND {time_filter}" if filter.strip() else time_filter
 
