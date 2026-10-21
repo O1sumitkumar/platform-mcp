@@ -6,6 +6,7 @@ import pytest
 
 from platform_mcp.formatting import (
     first_line,
+    quote_filter_value,
     money_to_float,
     parse_duration_seconds,
     parse_list_arg,
@@ -77,3 +78,39 @@ class TestMoneyToFloat:
 
     def test_none_is_none(self):
         assert money_to_float(None) is None
+
+
+class TestQuoteFilterValue:
+    """Values interpolated into Cloud filter strings must be escaped.
+
+    A service or metric name containing a quote or backslash otherwise
+    produces an opaque InvalidArgument from the API instead of the query
+    the caller meant to write (#13).
+    """
+
+    def test_plain_values_pass_through(self):
+        assert quote_filter_value("frontend") == "frontend"
+        assert (
+            quote_filter_value("compute.googleapis.com/instance/cpu/utilization")
+            == "compute.googleapis.com/instance/cpu/utilization"
+        )
+
+    def test_a_quote_is_escaped(self):
+        assert quote_filter_value('my"svc') == "my" + chr(92) + '"svc'
+
+    def test_a_backslash_is_escaped(self):
+        assert quote_filter_value("back" + chr(92) + "slash") == "back" + 2 * chr(92) + "slash"
+
+    def test_backslash_then_quote_is_escaped_in_order(self):
+        # The backslash is escaped first, then the quote, so a backslash
+        # followed by a quote stays distinguishable inside the filter.
+        raw = quote_filter_value("a" + chr(92) + '"b')
+        assert raw == "a" + 3 * chr(92) + '"b'
+
+    def test_the_escape_round_trips_in_the_documented_order(self):
+        # Unescaping (backslash pairs first, then escaped quotes) recovers
+        # the original value, so quoting does not lose information.
+        original = 'x"y' + chr(92) + "z"
+        raw = quote_filter_value(original)
+        unescaped = raw.replace(2 * chr(92), chr(92)).replace(chr(92) + '"', '"')
+        assert unescaped == original

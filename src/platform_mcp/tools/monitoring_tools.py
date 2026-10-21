@@ -7,7 +7,7 @@ import time
 from ..clients import get_alert_policy_client, get_metric_client, get_uptime_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import parse_duration_seconds, truncate
+from ..formatting import parse_duration_seconds, quote_filter_value, truncate
 
 # Points kept per series. A 1h window at 1m alignment is 60 points per series
 # and query_metric can return 50 series, which is far more than an answer needs.
@@ -82,7 +82,7 @@ def query_metric(
     aggregation = monitoring_v3.Aggregation(
         {"alignment_period": {"seconds": align_s}, "per_series_aligner": aligner_enum}
     )
-    filter_str = f'metric.type = "{metric_type}"'
+    filter_str = f'metric.type = "{quote_filter_value(metric_type)}"'
     if resource_filter.strip():
         filter_str += f" AND {resource_filter.strip()}"
 

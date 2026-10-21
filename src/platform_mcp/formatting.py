@@ -52,6 +52,18 @@ def parse_list_arg(value: str | None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def quote_filter_value(value: str) -> str:
+    """Escape a value for use inside a double-quoted Cloud filter string.
+
+    Cloud Logging and Monitoring filter strings are double-quoted, and both
+    the quote character and the backslash must be backslash-escaped inside
+    them. Without this, a service or metric value containing either produces
+    an opaque InvalidArgument from the API instead of the query the caller
+    meant to write.
+    """
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
 def parse_duration_seconds(freshness: str, default_seconds: int = 3600) -> int:
     """Parse a duration like '30m', '2h', '1d', '90s' into seconds."""
     if not freshness:

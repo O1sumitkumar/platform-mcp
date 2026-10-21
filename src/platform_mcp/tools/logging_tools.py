@@ -9,7 +9,7 @@ from typing import Any
 from ..clients import get_logging_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import parse_duration_seconds, truncate_reported
+from ..formatting import parse_duration_seconds, quote_filter_value, truncate_reported
 
 
 def _since_timestamp(freshness: str) -> str:
@@ -141,7 +141,10 @@ def get_recent_errors(
     parts = ["severity>=ERROR"]
     if service.strip():
         s = service.strip()
-        parts.append(f'(resource.labels.service_name="{s}" OR logName:"{s}")')
+        quoted = quote_filter_value(s)
+        parts.append(
+            f'(resource.labels.service_name="{quoted}" OR logName:"{quoted}")'
+        )
     return query_logs(
         filter=" AND ".join(parts),
         freshness=f"{max(1, hours)}h",
