@@ -10,7 +10,7 @@ from ..clients import get_asset_client, get_recommender_client
 from ..errors import PlatformMCPError
 from ..registration import register_tool
 from ..config import Environment, resolve_environment
-from ..formatting import money_to_float, parse_list_arg, truncate
+from ..formatting import clamp_limit, money_to_float, parse_list_arg, truncate
 
 # Cost-related recommenders. Most are zonal/regional, so we fan out across the
 # locations where the project actually has resources (discovered below).
@@ -114,6 +114,7 @@ def list_recommendations(
     env = resolve_environment(environment)
     client = get_recommender_client(env)
     project = env.project
+    limit = clamp_limit(limit, 200)
     parent = f"projects/{project}/locations/{location}/recommenders/{recommender_id}"
     items = []
     for rec in client.list_recommendations(parent=parent):
@@ -152,6 +153,7 @@ async def list_cost_recommendations(
     env = resolve_environment(environment)
     client = get_recommender_client(env)
     project = env.project
+    limit_per_call = clamp_limit(limit_per_call, 200)
 
     loc_list = parse_list_arg(locations)
     discovery_error = ""
