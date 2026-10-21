@@ -10,7 +10,7 @@ def truncate(text: Any, limit: int = 400) -> str:
     s = s.strip()
     if len(s) <= limit:
         return s
-    return s[: limit - 1] + "…"
+    return s[: limit - 1] + "â€¦"
 
 
 def truncate_reported(text: Any, limit: int) -> tuple[str, int]:
@@ -27,7 +27,7 @@ def truncate_reported(text: Any, limit: int) -> tuple[str, int]:
     original = len(s)
     if original <= limit:
         return s, original
-    return s[: limit - 1] + "…", original
+    return s[: limit - 1] + "â€¦", original
 
 
 def first_line(text: Any, limit: int = 300) -> str:
@@ -43,6 +43,16 @@ def money_to_float(money: Any) -> float | None:
     units = getattr(money, "units", 0) or 0
     nanos = getattr(money, "nanos", 0) or 0
     return round(units + nanos / 1e9, 4)
+
+
+def clamp_limit(value: int, maximum: int) -> int:
+    """Bound a caller-supplied ``limit`` to ``1..maximum``.
+
+    The list tools append an item before checking ``len(items) >= limit``, so
+    an unclamped ``limit=0`` (or a negative one) still returns one item, and a
+    huge value lets a single response grow without bound.
+    """
+    return max(1, min(value, maximum))
 
 
 def parse_list_arg(value: str | None) -> list[str]:
