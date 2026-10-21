@@ -1,0 +1,26 @@
+name: Feature request
+description: A new tool, argument, or behaviour.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        platform-mcp is read-only by design. Features that need write access to a
+        cloud project are out of scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The question you want the agent to answer
+      description: What would you ask, and why can't the current tools answer it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Tool name, arguments and response fields, if you have them in mind.
+  - type: textarea
+    id: api
+    attributes:
+      label: GCP API and IAM role
+      description: Which API it would call and which viewer role that needs.

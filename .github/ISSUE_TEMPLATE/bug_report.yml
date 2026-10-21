@@ -1,0 +1,48 @@
+name: Bug report
+description: A tool returned something wrong, failed, or hung.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact project IDs, service-account emails and log content before posting.
+        Anything that could let the server write to GCP or leak credentials should
+        be reported privately, not here. See CONTRIBUTING.md.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      placeholder: query_logs
+    validations:
+      required: true
+  - type: textarea
+    id: arguments
+    attributes:
+      label: Arguments
+      description: The arguments the tool was called with (redacted).
+      render: json
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The response or error. The matching line from ~/.local/state/platform-mcp/audit.jsonl helps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: platform-mcp version
+      description: Output of `platform-mcp --version`.
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      placeholder: Claude Code 2.x / Claude Desktop / other
