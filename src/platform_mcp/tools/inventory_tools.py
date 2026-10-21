@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..clients import get_asset_client
 from ..registration import register_tool
 from ..config import resolve_environment
-from ..formatting import parse_list_arg
+from ..formatting import clamp_limit, parse_list_arg
 
 
 def _format_resource(r, include_labels: bool = False) -> dict:
@@ -70,7 +70,7 @@ def search_assets(
     env = resolve_environment(environment)
     client = get_asset_client(env)
     project = env.project
-    limit = max(1, min(limit, 500))
+    limit = clamp_limit(limit, 500)
 
     request: dict = {"scope": f"projects/{project}", "page_size": min(limit, 500)}
     types = parse_list_arg(asset_types)
