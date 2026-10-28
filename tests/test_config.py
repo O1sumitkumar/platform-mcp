@@ -110,11 +110,6 @@ class TestDefaults:
                 },
                 "production",
             ),
-            # Two environments on one project: the project id can't pick one.
-            (
-                {"staging": "demo-shared", "production": "demo-shared"},
-                "demo-shared",
-            ),
         ],
     )
     def test_ambiguous_alias_is_rejected_at_load(self, monkeypatch, registry, shared):
@@ -122,6 +117,18 @@ class TestDefaults:
         clear_caches()
         with pytest.raises(RuntimeError, match=f"'{shared}'.*'staging' and 'production'"):
             config.get_settings()
+
+    def test_shared_project_id_dropped_from_lookup(self, monkeypatch):
+        monkeypatch.setenv(
+            "PLATFORM_MCP_ENVIRONMENTS",
+            json.dumps({"staging": "demo-shared", "production": "demo-shared"}),
+        )
+        clear_caches()
+        config.get_settings()
+        assert resolve_environment("staging").project == "demo-shared"
+        assert resolve_environment("production").project == "demo-shared"
+        with pytest.raises(ValueError, match="Unknown environment 'demo-shared'"):
+            resolve_environment("demo-shared")
 
     def test_alias_repeating_its_own_name_or_project_is_fine(self, monkeypatch):
         monkeypatch.setenv(

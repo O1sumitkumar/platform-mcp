@@ -159,18 +159,19 @@ def _parse_registry(raw: str) -> tuple[Environment, ...]:
 
 
 def _reject_ambiguous_names(environments: list[Environment]) -> None:
-    """Fail at load when one name, alias or project id points at two environments.
+    """Fail at load when one name or alias points at two environments.
 
     The lookup table keeps whichever environment it saw first, so a shared
     alias ("main" on both staging and production) would silently send one of
-    them to the other's project. The built-in shorthands are not checked here:
-    they are only applied when they don't collide.
+    them to the other's project. Shared GCP project ids are allowed (staging
+    and production on the same project); the project id is omitted from the
+    lookup table when more than one environment uses it. The built-in
+    shorthands are not checked here: they are only applied when they don't
+    collide.
     """
     owners: dict[str, str] = {}
     for env in environments:
         spellings = {env.name, *env.aliases}
-        if env.project:
-            spellings.add(env.project.lower())
         for spelling in sorted(spellings):
             other = owners.setdefault(spelling, env.name)
             if other != env.name:
@@ -179,6 +180,20 @@ def _reject_ambiguous_names(environments: list[Environment]) -> None:
                     f"'{other}' and '{env.name}' (as a name, alias or project id). "
                     "Each one must point at a single environment."
                 )
+    for env in environments:
+        own_project = env.project.lower()
+        for alias in env.aliases:
+            for other in environments:
+                if other.name == env.name:
+                    continue
+                if alias == other.name or (
+                    alias == other.project.lower() and alias != own_project
+                ):
+                    raise RuntimeError(
+                        f"PLATFORM_MCP_ENVIRONMENTS: '{alias}' is used by both "
+                        f"'{env.name}' and '{other.name}' (as a name, alias or "
+                        "project id). Each one must point at a single environment."
+                    )
 
 
 def config_path() -> Path:
@@ -272,6 +287,11 @@ def get_settings() -> Settings:
 def _lookup_table() -> dict[str, Environment]:
     """Map every accepted spelling of an environment to its Environment."""
     environments = get_settings().environments
+    project_counts: dict[str, int] = {}
+    for env in environments:
+        if env.project:
+            key = env.project.lower()
+            project_counts[key] = project_counts.get(key, 0) + 1
     table: dict[str, Environment] = {}
     for env in environments:
         table[env.name] = env
@@ -279,7 +299,9 @@ def _lookup_table() -> dict[str, Environment]:
             table.setdefault(alias, env)
         # Let the agent name the project id directly ("check my-app-prod").
         if env.project:
-            table.setdefault(env.project.lower(), env)
+            project_key = env.project.lower()
+            if project_counts.get(project_key, 0) == 1:
+                table.setdefault(project_key, env)
     for alias, canonical in _BUILTIN_ALIASES.items():
         if canonical in table:
             table.setdefault(alias, table[canonical])
