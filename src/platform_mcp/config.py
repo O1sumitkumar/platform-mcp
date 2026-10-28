@@ -154,7 +154,31 @@ def _parse_registry(raw: str) -> tuple[Environment, ...]:
         )
     if not environments:
         raise RuntimeError("PLATFORM_MCP_ENVIRONMENTS defined no usable environments.")
+    _reject_ambiguous_names(environments)
     return tuple(environments)
+
+
+def _reject_ambiguous_names(environments: list[Environment]) -> None:
+    """Fail at load when one name, alias or project id points at two environments.
+
+    The lookup table keeps whichever environment it saw first, so a shared
+    alias ("main" on both staging and production) would silently send one of
+    them to the other's project. The built-in shorthands are not checked here:
+    they are only applied when they don't collide.
+    """
+    owners: dict[str, str] = {}
+    for env in environments:
+        spellings = {env.name, *env.aliases}
+        if env.project:
+            spellings.add(env.project.lower())
+        for spelling in sorted(spellings):
+            other = owners.setdefault(spelling, env.name)
+            if other != env.name:
+                raise RuntimeError(
+                    f"PLATFORM_MCP_ENVIRONMENTS: '{spelling}' is used by both "
+                    f"'{other}' and '{env.name}' (as a name, alias or project id). "
+                    "Each one must point at a single environment."
+                )
 
 
 def config_path() -> Path:
